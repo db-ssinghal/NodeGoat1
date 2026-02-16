@@ -24,7 +24,7 @@ class BaseScanWorker {
     }
 
     /**
-     * Process scan results using streams (memory efficient)
+     * Process scan results using streams
      * @param {string} resultsFilePath - Path to the scan results file
      * @returns {Promise<Array>} - Array of critical vulnerabilities
      * @abstract

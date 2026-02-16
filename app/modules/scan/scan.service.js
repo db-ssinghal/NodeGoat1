@@ -70,16 +70,14 @@ class ScanService {
     async runScanInBackground(scanId, repoUrl, scannerType = ScannerType.TRIVY) {
         try {
             const worker = ScanWorkerFactory.getWorker(scannerType);
-
-            console.log(`[ScanService] Starting ${worker.getName()} scan ${scanId} for ${repoUrl}`);
+            console.log(`[runScanInBackground] Starting ${worker.getName()} scan ${scanId} for ${repoUrl}`);
 
             // Update status to Scanning
             await this.repository.updateStatus(scanId, ScanStatus.SCANNING);
 
             // Execute scan
             const resultsFilePath = await worker.executeScan(scanId, repoUrl);
-
-            console.log(`[ScanService] ${worker.getName()} completed for ${scanId}, processing results...`);
+            console.log(`[runScanInBackground] ${worker.getName()} completed for ${scanId}, processing results...`);
 
             // Process results using streams
             const criticalVulnerabilities = await worker.processResults(resultsFilePath);
@@ -88,14 +86,13 @@ class ScanService {
             await this.repository.updateStatus(scanId, ScanStatus.FINISHED, {
                 criticalVulnerabilities
             });
+            console.log(`[runScanInBackground] Scan ${scanId} finished successfully`);
 
-            console.log(`[ScanService] Scan ${scanId} finished successfully`);
-
-            // Cleanup
+            // Remove temporary results file
             await worker.cleanup(resultsFilePath);
 
         } catch (err) {
-            console.error(`[ScanService] Scan ${scanId} failed:`, err);
+            console.error(`[runScanInBackground] Scan ${scanId} failed:`, err);
             await this.repository.updateStatus(scanId, ScanStatus.FAILED, {
                 error: err.message
             });
