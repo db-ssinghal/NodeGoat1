@@ -85,8 +85,8 @@ const index = (app, db) => {
 
 
     // Scan API
-    app.post("/api/scan", scanHandler.handleScanRequest);
-    app.get("/api/scan/:scanId", scanHandler.getScanStatus);
+    app.post("/api/v1/scan", scanHandler.handleScanRequest);
+    app.get("/api/v1/scan/:scanId", scanHandler.getScanStatus);
 };
 
 module.exports = index;
