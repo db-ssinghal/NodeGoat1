@@ -3,6 +3,7 @@
 const { v4: uuidv4 } = require("uuid");
 const { spawn } = require("child_process");
 const fs = require("fs");
+const fsPromises = require("fs").promises;
 const path = require("path");
 const { parser } = require("stream-json");
 const { pick } = require("stream-json/filters/Pick");
@@ -22,22 +23,21 @@ function ScanHandler(db) {
     /**
      * Update scan status in database
      */
-    const updateScanStatus = (scanId, status, additionalData = {}) => {
-        scansCollection.updateOne(
-            { scanId: scanId },
-            {
-                $set: {
-                    status: status,
-                    updatedAt: new Date(),
-                    ...additionalData
+    const updateScanStatus = async (scanId, status, additionalData = {}) => {
+        try {
+            await scansCollection.updateOne(
+                { scanId: scanId },
+                {
+                    $set: {
+                        status: status,
+                        updatedAt: new Date(),
+                        ...additionalData
+                    }
                 }
-            },
-            (err) => {
-                if (err) {
-                    console.error(`Error updating scan ${scanId}:`, err);
-                }
-            }
-        );
+            );
+        } catch (err) {
+            console.error(`Error updating scan ${scanId}:`, err);
+        }
     };
 
     /**
@@ -46,46 +46,45 @@ function ScanHandler(db) {
      * Trivy JSON structure: { Results: [ { Target: "...", Vulnerabilities: [...] }, ... ] }
      */
     const processTrivyResults = (scanId, jsonFilePath) => {
-        const criticalVulnerabilities = [];
+        return new Promise((resolve, reject) => {
+            const criticalVulnerabilities = [];
 
-        const pipeline = chain([
-            fs.createReadStream(jsonFilePath),
-            parser(),
-            pick({ filter: "Results" }),
-            streamArray()
-        ]);
+            const pipeline = chain([
+                fs.createReadStream(jsonFilePath),
+                parser(),
+                pick({ filter: "Results" }),
+                streamArray()
+            ]);
 
-        pipeline.on("data", ({ value }) => {
-            // Each value is a Result object with Target and Vulnerabilities
-            if (value && value.Vulnerabilities && Array.isArray(value.Vulnerabilities)) {
-                value.Vulnerabilities.forEach((vuln) => {
-                    if (vuln.Severity === "CRITICAL") {
-                        criticalVulnerabilities.push({
-                            vulnerabilityId: vuln.VulnerabilityID,
-                            pkgName: vuln.PkgName,
-                            installedVersion: vuln.InstalledVersion,
-                            fixedVersion: vuln.FixedVersion,
-                            title: vuln.Title,
-                            severity: vuln.Severity
-                        });
-                    }
-                });
-            }
-        });
-
-        pipeline.on("end", () => {
-            console.log(`Scan ${scanId} completed. Found ${criticalVulnerabilities.length} critical vulnerabilities.`);
-            updateScanStatus(scanId, "Finished", { criticalVulnerabilities });
-
-            // Cleanup: remove JSON file
-            fs.unlink(jsonFilePath, (err) => {
-                if (err) console.error(`Error deleting ${jsonFilePath}:`, err);
+            pipeline.on("data", ({ value }) => {
+                // Each value is a Result object with Target and Vulnerabilities
+                if (value && value.Vulnerabilities && Array.isArray(value.Vulnerabilities)) {
+                    value.Vulnerabilities.forEach((vuln) => {
+                        if (vuln.Severity === "CRITICAL") {
+                            criticalVulnerabilities.push({
+                                vulnerabilityId: vuln.VulnerabilityID,
+                                pkgName: vuln.PkgName,
+                                installedVersion: vuln.InstalledVersion,
+                                fixedVersion: vuln.FixedVersion,
+                                title: vuln.Title,
+                                severity: vuln.Severity
+                            });
+                        }
+                    });
+                }
             });
-        });
 
-        pipeline.on("error", (err) => {
-            console.error(`Error processing results for scan ${scanId}:`, err);
-            updateScanStatus(scanId, "Failed", { error: err.message });
+            pipeline.on("end", () => {
+                console.log(
+                    `Scan ${scanId} completed. Found ${criticalVulnerabilities.length} critical vulnerabilities.`
+                );
+                resolve(criticalVulnerabilities);
+            });
+
+            pipeline.on("error", (err) => {
+                console.error(`Error processing results for scan ${scanId}:`, err);
+                reject(err);
+            });
         });
     };
 
@@ -103,65 +102,80 @@ function ScanHandler(db) {
     /**
      * Run Trivy scan in background
      */
-    const runTrivyScan = (scanId, repoUrl) => {
+    const runTrivyScan = async (scanId, repoUrl) => {
         const jsonFilePath = path.join(SCAN_DIR, `${scanId}.json`);
 
-        updateScanStatus(scanId, "Scanning");
+        try {
+            await updateScanStatus(scanId, "Scanning");
 
-        let trivy;
+            // Run Trivy and wait for completion
+            await new Promise((resolve, reject) => {
+                let trivy;
+                let stderrData = "";
 
-        if (isRunningInDocker()) {
-            // Running inside Docker - Trivy is installed directly in the container
-            trivy = spawn("trivy", [
-                "repo", repoUrl,
-                "--format", "json",
-                "--output", jsonFilePath,
-                "--scanners", "vuln"
-            ]);
-        } else {
-            // Running locally - use docker run with Trivy image
-            trivy = spawn("docker", [
-                "run", "--rm",
-                "-v", `${SCAN_DIR}:/tmp/scans`,
-                "aquasec/trivy:latest",
-                "repo", repoUrl,
-                "--format", "json",
-                "--output", `/tmp/scans/${scanId}.json`,
-                "--scanners", "vuln"
-            ]);
-        }
+                if (isRunningInDocker()) {
+                    // Running inside Docker - Trivy is installed directly in the container
+                    trivy = spawn("trivy", [
+                        "repo", repoUrl,
+                        "--format", "json",
+                        "--output", jsonFilePath,
+                        "--scanners", "vuln"
+                    ]);
+                } else {
+                    // Running locally - use docker run with Trivy image
+                    trivy = spawn("docker", [
+                        "run", "--rm",
+                        "-v", `${SCAN_DIR}:/tmp/scans`,
+                        "aquasec/trivy:latest",
+                        "repo", repoUrl,
+                        "--format", "json",
+                        "--output", `/tmp/scans/${scanId}.json`,
+                        "--scanners", "vuln"
+                    ]);
+                }
 
-        let stderrData = "";
+                trivy.stderr.on("data", (data) => {
+                    stderrData += data.toString();
+                    console.log(`Trivy stderr: ${data}`);
+                });
 
-        trivy.stderr.on("data", (data) => {
-            stderrData += data.toString();
-            console.log(`Trivy stderr: ${data}`);
-        });
+                trivy.on("close", (code) => {
+                    if (code !== 0) {
+                        reject(new Error(`Trivy exited with code ${code}: ${stderrData}`));
+                    } else {
+                        resolve();
+                    }
+                });
 
-        trivy.on("close", (code) => {
-            if (code !== 0) {
-                console.error(`Trivy exited with code ${code}`);
-                updateScanStatus(scanId, "Failed", { error: stderrData });
-                return;
-            }
+                trivy.on("error", (err) => {
+                    reject(err);
+                });
+            });
 
             console.log(`Trivy scan completed for ${scanId}, processing results...`);
 
             // Process results using streams
-            processTrivyResults(scanId, jsonFilePath);
-        });
+            const criticalVulnerabilities = await processTrivyResults(scanId, jsonFilePath);
+            await updateScanStatus(scanId, "Finished", { criticalVulnerabilities });
 
-        trivy.on("error", (err) => {
-            console.error(`Failed to start Trivy:`, err);
-            updateScanStatus(scanId, "Failed", { error: err.message });
-        });
+            // Cleanup: remove JSON file
+            try {
+                await fsPromises.unlink(jsonFilePath);
+            } catch (err) {
+                console.error(`Error deleting ${jsonFilePath}:`, err);
+            }
+
+        } catch (err) {
+            console.error(`Failed to run Trivy scan for ${scanId}:`, err);
+            await updateScanStatus(scanId, "Failed", { error: err.message });
+        }
     };
 
     /**
      * POST /api/scan
      * Accepts a GitHub repository URL and creates a new scan job
      */
-    this.handleScanRequest = (req, res) => {
+    this.handleScanRequest = async (req, res) => {
         const { repoUrl } = req.body;
 
         // Validate input
@@ -179,14 +193,12 @@ function ScanHandler(db) {
             });
         }
 
-        // Check if a scan for this repo is already in progress
-        scansCollection.findOne({ repoUrl: repoUrl, status: { $in: ["Queued"] } }, (err, existingScan) => {
-            if (err) {
-                console.error("Error checking existing scans:", err);
-                return res.status(500).json({
-                    error: "Ups!!! Huston we have a problem"
-                });
-            }
+        try {
+            // Check if a scan for this repo is already in progress
+            const existingScan = await scansCollection.findOne({
+                repoUrl: repoUrl,
+                status: { $in: ["Queued", "Scanning"] }
+            });
 
             if (existingScan) {
                 return res.status(409).json({
@@ -195,52 +207,46 @@ function ScanHandler(db) {
                     status: existingScan.status
                 });
             }
-        });
 
-        // Create scan record
-        const scanId = uuidv4();
-        const scan = {
-            scanId: scanId,
-            repoUrl: repoUrl,
-            status: "Queued",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            criticalVulnerabilities: []
-        };
+            // Create scan record
+            const scanId = uuidv4();
+            const scan = {
+                scanId: scanId,
+                repoUrl: repoUrl,
+                status: "Queued",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                criticalVulnerabilities: []
+            };
 
-        // Save to database
-        scansCollection.insertOne(scan, (err) => {
-            if (err) {
-                console.error("Error creating scan:", err);
-                return res.status(500).json({
-                    error: "Internal server error"
-                });
-            }
+            // Save to database
+            await scansCollection.insertOne(scan);
 
-            // Trigger background Trivy scan
+            // Trigger background Trivy scan (non-blocking)
             runTrivyScan(scanId, repoUrl);
 
             return res.status(202).json({
                 scanId: scanId,
                 status: "Queued"
             });
-        });
+
+        } catch (err) {
+            console.error("Error creating scan:", err);
+            return res.status(500).json({
+                error: "Internal server error"
+            });
+        }
     };
 
     /**
      * GET /api/scan/:scanId
      * Returns the status and results of a scan
      */
-    this.getScanStatus = (req, res) => {
+    this.getScanStatus = async (req, res) => {
         const { scanId } = req.params;
 
-        scansCollection.findOne({ scanId: scanId }, (err, scan) => {
-            if (err) {
-                console.error("Error getting scan status:", err);
-                return res.status(500).json({
-                    error: "Internal server error"
-                });
-            }
+        try {
+            const scan = await scansCollection.findOne({ scanId: scanId });
 
             if (!scan) {
                 return res.status(404).json({
@@ -256,7 +262,13 @@ function ScanHandler(db) {
                 updatedAt: scan.updatedAt,
                 criticalVulnerabilities: scan.criticalVulnerabilities
             });
-        });
+
+        } catch (err) {
+            console.error("Error getting scan status:", err);
+            return res.status(500).json({
+                error: "Internal server error"
+            });
+        }
     };
 }
 
