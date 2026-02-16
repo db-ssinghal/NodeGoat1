@@ -1,5 +1,7 @@
 "use strict";
 
+const { ScanModel, ScanStatus } = require("./scan.model");
+
 /**
  * Repository layer - handles database operations for scans
  */
@@ -10,33 +12,36 @@ class ScanRepository {
 
     /**
      * Create a new scan record
-     * @param {Object} scan - Scan object to insert
-     * @returns {Promise<Object>} - Inserted scan
+     * @param {ScanModel} scan - ScanModel instance to insert
+     * @returns {Promise<ScanModel>} - Inserted scan
      */
     async create(scan) {
-        const result = await this.collection.insertOne(scan);
-        return { ...scan, _id: result.insertedId };
+        const doc = scan.toDocument();
+        const result = await this.collection.insertOne(doc);
+        return ScanModel.fromDocument({ ...doc, _id: result.insertedId });
     }
 
     /**
      * Find scan by scanId
      * @param {string} scanId - Unique scan identifier
-     * @returns {Promise<Object|null>} - Scan object or null
+     * @returns {Promise<ScanModel|null>} - ScanModel instance or null
      */
     async findByScanId(scanId) {
-        return await this.collection.findOne({ scanId });
+        const doc = await this.collection.findOne({ scanId });
+        return ScanModel.fromDocument(doc);
     }
 
     /**
      * Find active scan (Queued or Scanning) for a repository
      * @param {string} repoUrl - Repository URL
-     * @returns {Promise<Object|null>} - Active scan or null
+     * @returns {Promise<ScanModel|null>} - Active scan or null
      */
     async findActiveScanByRepoUrl(repoUrl) {
-        return await this.collection.findOne({
+        const doc = await this.collection.findOne({
             repoUrl,
-            status: { $in: ["Queued", "Scanning"] }
+            status: { $in: [ScanStatus.QUEUED, ScanStatus.SCANNING] }
         });
+        return ScanModel.fromDocument(doc);
     }
 
     /**
@@ -64,15 +69,17 @@ class ScanRepository {
      * Get all scans (with optional pagination)
      * @param {number} limit - Max number of results
      * @param {number} skip - Number of results to skip
-     * @returns {Promise<Array>} - Array of scans
+     * @returns {Promise<Array<ScanModel>>} - Array of ScanModel instances
      */
     async findAll(limit = 100, skip = 0) {
-        return await this.collection
+        const docs = await this.collection
             .find({})
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .toArray();
+
+        return docs.map(doc => ScanModel.fromDocument(doc));
     }
 }
 

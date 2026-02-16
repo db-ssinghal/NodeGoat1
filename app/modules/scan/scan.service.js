@@ -1,18 +1,9 @@
 "use strict";
 
 const { v4: uuidv4 } = require("uuid");
+const { ScanModel, ScanStatus } = require("./scan.model");
 const ScanRepository = require("./scan.repository");
 const scanWorker = require("./scan.worker");
-
-/**
- * Scan status enum
- */
-const ScanStatus = {
-    QUEUED: "Queued",
-    SCANNING: "Scanning",
-    FINISHED: "Finished",
-    FAILED: "Failed"
-};
 
 /**
  * Service layer - business logic for scan operations
@@ -51,25 +42,21 @@ class ScanService {
             throw error;
         }
 
-        // Create scan record
-        const scanId = uuidv4();
-        const scan = {
-            scanId,
+        // Create scan model
+        const scan = new ScanModel({
+            scanId: uuidv4(),
             repoUrl,
-            status: ScanStatus.QUEUED,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            criticalVulnerabilities: []
-        };
+            status: ScanStatus.QUEUED
+        });
 
         await this.repository.create(scan);
 
         // Trigger background scan (non-blocking)
-        this.runScanInBackground(scanId, repoUrl);
+        this.runScanInBackground(scan.scanId, repoUrl);
 
         return {
-            scanId,
-            status: ScanStatus.QUEUED
+            scanId: scan.scanId,
+            status: scan.status
         };
     }
 
@@ -114,31 +101,17 @@ class ScanService {
     /**
      * Get scan by ID
      * @param {string} scanId - Scan identifier
-     * @returns {Promise<Object|null>} - Scan data
+     * @returns {Promise<ScanModel|null>} - ScanModel instance or null
      */
     async getScanById(scanId) {
-        const scan = await this.repository.findByScanId(scanId);
-
-        if (!scan) {
-            return null;
-        }
-
-        return {
-            scanId: scan.scanId,
-            repoUrl: scan.repoUrl,
-            status: scan.status,
-            createdAt: scan.createdAt,
-            updatedAt: scan.updatedAt,
-            criticalVulnerabilities: scan.criticalVulnerabilities,
-            error: scan.error
-        };
+        return await this.repository.findByScanId(scanId);
     }
 
     /**
      * Get all scans
      * @param {number} limit - Max results
      * @param {number} skip - Skip results
-     * @returns {Promise<Array>} - Array of scans
+     * @returns {Promise<Array<ScanModel>>} - Array of ScanModel instances
      */
     async getAllScans(limit = 100, skip = 0) {
         return await this.repository.findAll(limit, skip);

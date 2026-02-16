@@ -6,11 +6,11 @@ const ScanService = require("../modules/scan/scan.service");
  * Controller layer - handles HTTP requests/responses
  * Thin layer that delegates business logic to ScanService
  */
-function ScanHandler(db) {
+function ScanController(db) {
     const scanService = new ScanService(db);
 
     /**
-     * POST /api/v1/scan
+     * POST /api/scan
      * Accepts a GitHub repository URL and creates a new scan job
      */
     this.handleScanRequest = async (req, res) => {
@@ -45,7 +45,7 @@ function ScanHandler(db) {
                 });
             }
 
-            console.error("[ScanHandler] Error creating scan:", err);
+            console.error("[ScanController] Error creating scan:", err);
             return res.status(500).json({
                 error: "Internal server error"
             });
@@ -53,7 +53,7 @@ function ScanHandler(db) {
     };
 
     /**
-     * GET /api/v1/scan/:scanId
+     * GET /api/scan/:scanId
      * Returns the status and results of a scan
      */
     this.getScanStatus = async (req, res) => {
@@ -68,10 +68,36 @@ function ScanHandler(db) {
                 });
             }
 
-            return res.status(200).json(scan);
+            return res.status(200).json(scan.toResponse());
 
         } catch (err) {
-            console.error("[ScanHandler] Error getting scan status:", err);
+            console.error("[ScanController] Error getting scan status:", err);
+            return res.status(500).json({
+                error: "Internal server error"
+            });
+        }
+    };
+
+    /**
+     * GET /api/scans
+     * Returns list of all scans
+     */
+    this.getAllScans = async (req, res) => {
+        const limit = parseInt(req.query.limit) || 100;
+        const skip = parseInt(req.query.skip) || 0;
+
+        try {
+            const scans = await scanService.getAllScans(limit, skip);
+
+            return res.status(200).json({
+                scans: scans.map(scan => scan.toResponse()),
+                count: scans.length,
+                limit,
+                skip
+            });
+
+        } catch (err) {
+            console.error("[ScanController] Error getting scans:", err);
             return res.status(500).json({
                 error: "Internal server error"
             });
@@ -79,4 +105,4 @@ function ScanHandler(db) {
     };
 }
 
-module.exports = ScanHandler;
+module.exports = ScanController;
