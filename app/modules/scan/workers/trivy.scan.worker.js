@@ -9,6 +9,8 @@ const { pick } = require("stream-json/filters/Pick");
 const { streamArray } = require("stream-json/streamers/StreamArray");
 const { chain } = require("stream-chain");
 
+const BaseScanWorker = require("./base.scan.worker");
+
 const SCAN_DIR = "/tmp/scans";
 
 // Ensure scan directory exists
@@ -17,17 +19,20 @@ if (!fs.existsSync(SCAN_DIR)) {
 }
 
 /**
- * Worker layer - handles the actual Trivy scanning process
- * Responsible for: spawning Trivy, streaming JSON results, cleanup
+ * Trivy scanner implementation
  */
-class ScanWorker {
+class TrivyScanWorker extends BaseScanWorker {
+    constructor() {
+        super("trivy");
+    }
+
     /**
      * Execute Trivy scan on a repository
      * @param {string} scanId - Unique scan identifier
      * @param {string} repoUrl - GitHub repository URL
      * @returns {Promise<string>} - Path to the JSON results file
      */
-    async executeTrivyScan(scanId, repoUrl) {
+    async executeScan(scanId, repoUrl) {
         const jsonFilePath = path.join(SCAN_DIR, `${scanId}.json`);
 
         await new Promise((resolve, reject) => {
@@ -39,7 +44,7 @@ class ScanWorker {
             ]);
 
             trivyProcess.stderr.on("data", (data) => {
-                console.log(`[ScanWorker] Trivy stderr: ${data.toString()}`);
+                console.log(`[TrivyScanWorker#executeScan] stderr: ${data.toString()}`);
             });
 
             trivyProcess.on("close", (code) => {
@@ -51,7 +56,7 @@ class ScanWorker {
             });
 
             trivyProcess.on("error", (err) => {
-                console.error(`[ScanWorker] Trivy process error:`, err);
+                console.error(`[TrivyScanWorker#executeScan] Process error:`, err);
                 reject(err);
             });
         });
@@ -60,8 +65,7 @@ class ScanWorker {
     }
 
     /**
-     * Process Trivy JSON output using streams (memory efficient)
-     * IMPORTANT: We use streams to avoid loading entire JSON into memory
+     *
      * @param {string} jsonFilePath - Path to the Trivy JSON output
      * @returns {Promise<Array>} - Array of critical vulnerabilities
      */
@@ -80,29 +84,42 @@ class ScanWorker {
                 if (value && value.Vulnerabilities && Array.isArray(value.Vulnerabilities)) {
                     value.Vulnerabilities.forEach((vuln) => {
                         if (vuln.Severity === "CRITICAL") {
-                            criticalVulnerabilities.push({
-                                vulnerabilityId: vuln.VulnerabilityID,
-                                pkgName: vuln.PkgName,
-                                installedVersion: vuln.InstalledVersion,
-                                fixedVersion: vuln.FixedVersion,
-                                title: vuln.Title,
-                                severity: vuln.Severity
-                            });
+                            criticalVulnerabilities.push(this._mapVulnerability(vuln));
                         }
                     });
                 }
             });
 
             pipeline.on("end", () => {
-                console.log(`[ScanWorker] Found ${criticalVulnerabilities.length} critical vulnerabilities`);
+                console.log(`[TrivyScanWorker] Found ${criticalVulnerabilities.length} critical vulnerabilities`);
                 resolve(criticalVulnerabilities);
             });
 
             pipeline.on("error", (err) => {
-                console.error(`[ScanWorker] Error processing results:`, err);
+                console.error(`[TrivyScanWorker] Error processing results:`, err);
                 reject(err);
             });
         });
+    }
+
+    /**
+     * Map Trivy vulnerability to common format
+     * @param {Object} vuln - Trivy vulnerability object
+     * @returns {Object} - Normalized vulnerability object
+     * @private
+     */
+    _mapVulnerability(vuln) {
+        return {
+            vulnerabilityId: vuln.VulnerabilityID,
+            pkgName: vuln.PkgName,
+            installedVersion: vuln.InstalledVersion,
+            fixedVersion: vuln.FixedVersion,
+            title: vuln.Title,
+            description: vuln.Description,
+            severity: vuln.Severity,
+            references: vuln.References || [],
+            scanner: this.name
+        };
     }
 
     /**
@@ -112,12 +129,12 @@ class ScanWorker {
     async cleanup(jsonFilePath) {
         try {
             await fsPromises.unlink(jsonFilePath);
-            console.log(`[ScanWorker] Cleaned up ${jsonFilePath}`);
+            console.log(`[TrivyScanWorker] Cleaned up ${jsonFilePath}`);
         } catch (err) {
-            console.error(`[ScanWorker] Error deleting ${jsonFilePath}:`, err);
+            console.error(`[TrivyScanWorker] Error deleting ${jsonFilePath}:`, err);
         }
     }
 }
 
-module.exports = new ScanWorker();
+module.exports = TrivyScanWorker;
 

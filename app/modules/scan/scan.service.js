@@ -3,7 +3,7 @@
 const { v4: uuidv4 } = require("uuid");
 const { ScanModel, ScanStatus } = require("./scan.model");
 const ScanRepository = require("./scan.repository");
-const scanWorker = require("./scan.worker");
+const { ScanWorkerFactory, ScannerType } = require("./workers");
 
 /**
  * Service layer - business logic for scan operations
@@ -26,10 +26,11 @@ class ScanService {
     /**
      * Create a new scan job
      * @param {string} repoUrl - GitHub repository URL
+     * @param {string} scannerType - Scanner type (default: trivy)
      * @returns {Promise<Object>} - Created scan info
      * @throws {Error} - If validation fails or scan already exists
      */
-    async createScan(repoUrl) {
+    async createScan(repoUrl, scannerType = ScannerType.TRIVY) {
         // Check for existing active scan
         const existingScan = await this.repository.findActiveScanByRepoUrl(repoUrl);
         if (existingScan) {
@@ -46,13 +47,13 @@ class ScanService {
         const scan = new ScanModel({
             scanId: uuidv4(),
             repoUrl,
-            status: ScanStatus.QUEUED
+            status: ScanStatus.QUEUED,
+            scanner: scannerType
         });
-
         await this.repository.create(scan);
 
         // Trigger background scan (non-blocking)
-        this.runScanInBackground(scan.scanId, repoUrl);
+        this.runScanInBackground(scan.scanId, repoUrl, scannerType);
 
         return {
             scanId: scan.scanId,
@@ -64,21 +65,24 @@ class ScanService {
      * Run the scan process in background
      * @param {string} scanId - Scan identifier
      * @param {string} repoUrl - Repository URL
+     * @param {string} scannerType - Scanner type
      */
-    async runScanInBackground(scanId, repoUrl) {
+    async runScanInBackground(scanId, repoUrl, scannerType = ScannerType.TRIVY) {
         try {
+            const worker = ScanWorkerFactory.getWorker(scannerType);
+
+            console.log(`[ScanService] Starting ${worker.getName()} scan ${scanId} for ${repoUrl}`);
+
             // Update status to Scanning
             await this.repository.updateStatus(scanId, ScanStatus.SCANNING);
 
-            console.log(`[ScanService] Starting scan ${scanId} for ${repoUrl}`);
+            // Execute scan
+            const resultsFilePath = await worker.executeScan(scanId, repoUrl);
 
-            // Execute Trivy scan
-            const jsonFilePath = await scanWorker.executeTrivyScan(scanId, repoUrl);
-
-            console.log(`[ScanService] Trivy completed for ${scanId}, processing results...`);
+            console.log(`[ScanService] ${worker.getName()} completed for ${scanId}, processing results...`);
 
             // Process results using streams
-            const criticalVulnerabilities = await scanWorker.processResults(jsonFilePath);
+            const criticalVulnerabilities = await worker.processResults(resultsFilePath);
 
             // Update with results
             await this.repository.updateStatus(scanId, ScanStatus.FINISHED, {
@@ -88,7 +92,7 @@ class ScanService {
             console.log(`[ScanService] Scan ${scanId} finished successfully`);
 
             // Cleanup
-            await scanWorker.cleanup(jsonFilePath);
+            await worker.cleanup(resultsFilePath);
 
         } catch (err) {
             console.error(`[ScanService] Scan ${scanId} failed:`, err);
@@ -108,13 +112,11 @@ class ScanService {
     }
 
     /**
-     * Get all scans
-     * @param {number} limit - Max results
-     * @param {number} skip - Skip results
-     * @returns {Promise<Array<ScanModel>>} - Array of ScanModel instances
+     * Get available scanner types
+     * @returns {Array<string>}
      */
-    async getAllScans(limit = 100, skip = 0) {
-        return await this.repository.findAll(limit, skip);
+    getAvailableScanners() {
+        return ScanWorkerFactory.getAvailableTypes();
     }
 }
 

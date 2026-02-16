@@ -64,23 +64,6 @@ class ScanRepository {
         );
         return result.modifiedCount > 0;
     }
-
-    /**
-     * Get all scans (with optional pagination)
-     * @param {number} limit - Max number of results
-     * @param {number} skip - Number of results to skip
-     * @returns {Promise<Array<ScanModel>>} - Array of ScanModel instances
-     */
-    async findAll(limit = 100, skip = 0) {
-        const docs = await this.collection
-            .find({})
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .toArray();
-
-        return docs.map(doc => ScanModel.fromDocument(doc));
-    }
 }
 
 module.exports = ScanRepository;

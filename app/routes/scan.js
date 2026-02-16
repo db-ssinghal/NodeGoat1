@@ -61,7 +61,6 @@ function ScanController(db) {
 
         try {
             const scan = await scanService.getScanById(scanId);
-
             if (!scan) {
                 return res.status(404).json({
                     error: "Scan not found"
@@ -72,32 +71,6 @@ function ScanController(db) {
 
         } catch (err) {
             console.error("[ScanController] Error getting scan status:", err);
-            return res.status(500).json({
-                error: "Internal server error"
-            });
-        }
-    };
-
-    /**
-     * GET /api/scans
-     * Returns list of all scans
-     */
-    this.getAllScans = async (req, res) => {
-        const limit = parseInt(req.query.limit) || 100;
-        const skip = parseInt(req.query.skip) || 0;
-
-        try {
-            const scans = await scanService.getAllScans(limit, skip);
-
-            return res.status(200).json({
-                scans: scans.map(scan => scan.toResponse()),
-                count: scans.length,
-                limit,
-                skip
-            });
-
-        } catch (err) {
-            console.error("[ScanController] Error getting scans:", err);
             return res.status(500).json({
                 error: "Internal server error"
             });

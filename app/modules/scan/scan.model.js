@@ -18,6 +18,7 @@ class ScanModel {
         this.scanId = data.scanId || null;
         this.repoUrl = data.repoUrl || null;
         this.status = data.status || ScanStatus.QUEUED;
+        this.scanner = data.scanner || "trivy";
         this.createdAt = data.createdAt || new Date();
         this.updatedAt = data.updatedAt || new Date();
         this.criticalVulnerabilities = data.criticalVulnerabilities || [];
@@ -57,6 +58,7 @@ class ScanModel {
             scanId: this.scanId,
             repoUrl: this.repoUrl,
             status: this.status,
+            scanner: this.scanner,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             criticalVulnerabilities: this.criticalVulnerabilities,
@@ -73,6 +75,7 @@ class ScanModel {
             scanId: this.scanId,
             repoUrl: this.repoUrl,
             status: this.status,
+            scanner: this.scanner,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             criticalVulnerabilities: this.criticalVulnerabilities
