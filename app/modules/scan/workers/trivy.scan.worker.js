@@ -38,11 +38,22 @@ class TrivyScanWorker extends BaseScanWorker {
         const jsonFilePath = path.join(SCAN_DIR, `${scanId}.json`);
 
         await new Promise((resolve, reject) => {
+            // For local run
+            // const trivyProcess = spawn("trivy", [
+            //     "repo", repoUrl,
+            //     "--format", "json",
+            //     "--output", jsonFilePath,
+            //     "--scanners", "vuln"
+            // ]);
+
             const trivyProcess = spawn("trivy", [
                 "repo", repoUrl,
+                "--server", "http://trivy:8080",
                 "--format", "json",
                 "--output", jsonFilePath,
-                "--scanners", "vuln"
+                "--scanners", "vuln",
+                "--parallel", "1",
+                "--no-progress"
             ]);
 
             trivyProcess.stderr.on("data", (data) => {
@@ -50,11 +61,13 @@ class TrivyScanWorker extends BaseScanWorker {
                 // TODO: If ew need to log output, or send to Kafka etc
             });
 
-            trivyProcess.on("close", (code) => {
-                if (code !== 0) { // If Trivy exits with non-zero code, consider it a failure
-                    return reject(new Error(`Trivy exited with code ${code}`));
+            trivyProcess.on("close", (code, signal) => {
+                if (signal) {
+                    return reject(new Error(`[TrivyScanWorker#executeScan] Trivy was terminated by signal ${signal}`));
                 }
-
+                if (code !== 0) {
+                    return reject(new Error(`[TrivyScanWorker#executeScan] Trivy exited with code ${code}`));
+                }
                 resolve();
             });
 
@@ -93,7 +106,6 @@ class TrivyScanWorker extends BaseScanWorker {
                             // Also possible to stream them to Kafka or store in DB directly from here if needed
                             // Another way use event emitter to send them one by one to the service layer,
                             // but for simplicity we will just collect them in an array and return at the end of stream
-
                             filteredVulnerabilities.push(VulnerabilityDTO.fromTrivy(vuln, this.name));
                         }
                     });

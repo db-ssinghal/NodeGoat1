@@ -3,6 +3,8 @@ version: "3.7"
 services:
   web:
     build: .
+    mem_limit: 200m
+    #memswap_limit: 200m
     environment:
       NODE_ENV:
       MONGODB_URI: mongodb://mongo:27017/nodegoat
@@ -21,6 +23,12 @@ services:
     ports:
       - "27017:27017"
 
+  trivy:
+    image: aquasec/trivy:latest
+    command: [ "server", "--listen", "0.0.0.0:8080" ]
+    volumes:
+      - trivy-cache:/root/.cache/trivy
+
   frontend:
     image: node:18-alpine
     working_dir: /app
@@ -36,3 +44,4 @@ services:
 
 volumes:
   scan-tmp:
+  trivy-cache:
