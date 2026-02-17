@@ -10,6 +10,7 @@ const { streamArray } = require("stream-json/streamers/StreamArray");
 const { chain } = require("stream-chain");
 
 const BaseScanWorker = require("./base.scan.worker");
+const { VulnerabilityDTO } = require("../dto");
 
 const SCAN_DIR = "/tmp/scans";
 
@@ -45,14 +46,15 @@ class TrivyScanWorker extends BaseScanWorker {
 
             trivyProcess.stderr.on("data", (data) => {
                 console.log(`[TrivyScanWorker#executeScan] stderr: ${data.toString()}`);
+                // TODO: If ew need to log output, or send to Kafka etc
             });
 
             trivyProcess.on("close", (code) => {
-                if (code !== 0) {
-                    reject(new Error(`Trivy exited with code ${code}`));
-                } else {
-                    resolve();
+                if (code !== 0) { // If Trivy exits with non-zero code, consider it a failure
+                    return reject(new Error(`Trivy exited with code ${code}`));
                 }
+
+                resolve();
             });
 
             trivyProcess.on("error", (err) => {
@@ -84,7 +86,13 @@ class TrivyScanWorker extends BaseScanWorker {
                 if (value && value.Vulnerabilities && Array.isArray(value.Vulnerabilities)) {
                     value.Vulnerabilities.forEach((vuln) => {
                         if (vuln.Severity === "CRITICAL") {
-                            criticalVulnerabilities.push(this._mapVulnerability(vuln));
+
+                            // Lets assume that we store critical vulnerabilities in memory
+                            // Also possible to stream them to Kafka or store in DB directly from here if needed
+                            // Another way use event emitter to send them one by one to the service layer,
+                            // but for simplicity we will just collect them in an array and return at the end of stream
+
+                            criticalVulnerabilities.push(VulnerabilityDTO.fromTrivy(vuln, this.name));
                         }
                     });
                 }
@@ -100,26 +108,6 @@ class TrivyScanWorker extends BaseScanWorker {
                 reject(err);
             });
         });
-    }
-
-    /**
-     * Map Trivy vulnerability to common format
-     * @param {Object} vuln - Trivy vulnerability object
-     * @returns {Object} - Normalized vulnerability object
-     * @private
-     */
-    _mapVulnerability(vuln) {
-        return {
-            vulnerabilityId: vuln.VulnerabilityID,
-            pkgName: vuln.PkgName,
-            installedVersion: vuln.InstalledVersion,
-            fixedVersion: vuln.FixedVersion,
-            title: vuln.Title,
-            description: vuln.Description,
-            severity: vuln.Severity,
-            references: vuln.References || [],
-            scanner: this.name
-        };
     }
 
     /**

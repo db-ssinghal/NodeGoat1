@@ -43,7 +43,7 @@ class ScanService {
             throw error;
         }
 
-        // Create scan model
+        // Otherwise create a new scan model
         const scan = new ScanModel({
             scanId: uuidv4(),
             repoUrl,
@@ -53,7 +53,7 @@ class ScanService {
         await this.repository.create(scan);
 
         // Trigger background scan (non-blocking)
-        this.runScanInBackground(scan.scanId, repoUrl, scannerType);
+        void this.runScanInBackground(scan.scanId, repoUrl, scannerType);
 
         return {
             scanId: scan.scanId,
@@ -75,11 +75,11 @@ class ScanService {
             // Update status to Scanning
             await this.repository.updateStatus(scanId, ScanStatus.SCANNING);
 
-            // Execute scan
+            // Run scan
             const resultsFilePath = await worker.executeScan(scanId, repoUrl);
             console.log(`[runScanInBackground] ${worker.getName()} completed for ${scanId}, processing results...`);
 
-            // Process results using streams
+            // Process results
             const criticalVulnerabilities = await worker.processResults(resultsFilePath);
 
             // Update with results

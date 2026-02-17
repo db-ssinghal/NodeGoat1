@@ -10,7 +10,7 @@ function ScanController(db) {
     const scanService = new ScanService(db);
 
     /**
-     * POST /api/scan
+     * POST /api/v1/scan
      * Accepts a GitHub repository URL and creates a new scan job
      */
     this.handleScanRequest = async (req, res) => {
@@ -32,8 +32,7 @@ function ScanController(db) {
 
         try {
             const result = await scanService.createScan(repoUrl);
-
-            return res.status(202).json(result);
+            return res.status(201).json(result);
 
         } catch (err) {
             // Handle specific error codes
@@ -53,7 +52,7 @@ function ScanController(db) {
     };
 
     /**
-     * GET /api/scan/:scanId
+     * GET /api/v1/scan/:scanId
      * Returns the status and results of a scan
      */
     this.getScanStatus = async (req, res) => {

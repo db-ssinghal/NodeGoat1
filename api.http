@@ -11,7 +11,7 @@ Content-Type: application/json
 
 
 ### Get scan status by ID
-GET http://localhost:4000/api/v1/scan/b6cc87b9-495d-4dae-97ab-0ce1b786cdc0
+GET http://localhost:4000/api/v1/scan/e70c4f5c-76a9-4273-99c5-abf42b422eed
 
 
 
