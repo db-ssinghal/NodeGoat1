@@ -1,12 +1,19 @@
-FROM node:12-alpine
+FROM node:18-alpine
 ENV WORKDIR /usr/src/app/
 WORKDIR $WORKDIR
 COPY package*.json $WORKDIR
 RUN npm install --production --no-cache
 
-FROM node:12-alpine
+FROM node:18-alpine
 ENV USER node
 ENV WORKDIR /home/$USER/app
+
+# Install Trivy
+RUN apk add --no-cache curl git \
+    && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin \
+    && mkdir -p /tmp/scans \
+    && chmod 777 /tmp/scans
+
 WORKDIR $WORKDIR
 COPY --from=0 /usr/src/app/node_modules node_modules
 RUN chown $USER:$USER $WORKDIR
@@ -16,3 +23,4 @@ COPY --chown=node . $WORKDIR
 # Then all further actions including running the containers should be done under non-root user.
 USER $USER
 EXPOSE 4000
+EXPOSE 9229

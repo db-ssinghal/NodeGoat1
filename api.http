@@ -1,0 +1,17 @@
+### Scan API Endpoints
+
+## Create a new scan
+
+POST http://localhost:4000/api/v1/scan
+Content-Type: application/json
+
+{
+    "repoUrl": "https://github.com/OWASP/NodeGoat"
+}
+
+
+### Get scan status by ID
+GET http://localhost:4000/api/v1/scan/0bba6a0c-450f-4630-a0ab-92cfc03e750f
+
+
+

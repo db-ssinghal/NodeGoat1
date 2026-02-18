@@ -5,8 +5,10 @@ const ContributionsHandler = require("./contributions");
 const AllocationsHandler = require("./allocations");
 const MemosHandler = require("./memos");
 const ResearchHandler = require("./research");
+const ScanHandler = require("./scan");
 const tutorialRouter = require("./tutorial");
 const ErrorHandler = require("./error").errorHandler;
+const graphqlRouter = require("./graphql");
 
 const index = (app, db) => {
 
@@ -19,6 +21,7 @@ const index = (app, db) => {
     const allocationsHandler = new AllocationsHandler(db);
     const memosHandler = new MemosHandler(db);
     const researchHandler = new ResearchHandler(db);
+    const scanHandler = new ScanHandler(db);
 
     // Middleware to check if a user is logged in
     const isLoggedIn = sessionHandler.isLoggedInMiddleware;
@@ -80,6 +83,13 @@ const index = (app, db) => {
 
     // Error handling middleware
     app.use(ErrorHandler);
+
+
+    // Scan API
+    app.post("/api/v1/scan", scanHandler.handleScanRequest);
+    app.get("/api/v1/scan/:scanId", scanHandler.getScanStatus);
+
+    graphqlRouter(app, db);
 };
 
 module.exports = index;
