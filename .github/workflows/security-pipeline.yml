@@ -72,7 +72,7 @@ jobs:
   # ==========================================================================
   build:
     name: "CI · Build"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: "Checkout repository"
@@ -87,13 +87,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
+      - name: "Install dependencies (clean install)"
+        run: npm ci
+
       - name: "Install Cypress system dependencies"
         run: |
           sudo apt-get update -y
           sudo apt-get install -y libgconf-2-4 xvfb
 
-      - name: "Install dependencies (clean install)"
-        run: npm ci
+      - name: "Verify Cypress binary"
+        run: npm run cy:verify
 
       # Persist node_modules and Cypress cache for downstream jobs
       - name: "Cache build artefacts"
