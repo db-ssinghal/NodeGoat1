@@ -72,7 +72,7 @@ jobs:
   # ==========================================================================
   build:
     name: "CI · Build"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: "Checkout repository"
@@ -116,7 +116,7 @@ jobs:
   # ==========================================================================
   e2e-test:
     name: "Test · E2E (Node ${{ matrix.node-version }})"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: [build]
 
     strategy:
@@ -144,6 +144,11 @@ jobs:
             ~/.cache/Cypress
           key: "${{ runner.os }}-build-${{ hashFiles('package-lock.json') }}"
 
+      - name: "Install Chrome"
+        run: |
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          sudo apt-get install -y google-chrome-stable
+
       - name: "Start MongoDB container"
         run: |
           docker run -d -p 27017:27017 mongo:4.0
@@ -154,7 +159,7 @@ jobs:
         id: e2e
         run: |
           NODE_ENV=test npm start -- --silent &
-          npm run test:ci -- --config video=true
+          npm run test:ci -- --config video=false --browser chrome
 
       # Upload screenshots + videos only on failure for fast triage
       - name: "Prepare Cypress artefacts on failure"
