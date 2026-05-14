@@ -28,20 +28,20 @@ jobs:
           terraform validate
 
   # # --- QUÉT MÃ NGUỒN BẢO MẬT (SAST) ---
-  # sast-scan:
-  #   name: 2. SAST Scanning (Semgrep)
-  #   needs: terraform-check 
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: 1. Checkout Source Code
-  #       uses: actions/checkout@v4
+  sast-scan:
+    name: 2. SAST Scanning (Semgrep)
+    needs: terraform-check 
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout Source Code
+        uses: actions/checkout@v4
 
-  #     - name: 2. Run Semgrep
-  #       uses: returntocorp/semgrep-action@v1
-  #       with:
-  #         config: >- 
-  #           p/security-audit
-  #           p/nodejs
+      - name: 2. Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >- 
+            p/security-audit
+            p/nodejs
 
   # ---  DOCKER BUILD  ---
   build-and-test:
