@@ -89,9 +89,9 @@
         //Enable Express csrf protection
         app.use(express.csrf());
 
-        app.use(function(req, res, next) { 
-            res.locals.csrftoken = req.csrfToken(); 
-            next(); 
+        app.use(function(req, res, next) {
+            res.locals.csrftoken = req.csrfToken();
+            next();
         }); </pre> Next, this token can be included in a hidden form field in
                 <code>views/profile.html</code>as below.
                 <pre>

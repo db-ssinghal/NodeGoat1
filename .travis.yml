@@ -15,7 +15,7 @@ addons:
     packages:
     - libgconf-2-4
 
-  
+
 ## Cache NPM folder and Cypress binary
 ## to avoid downloading Cypress again and again
 cache:

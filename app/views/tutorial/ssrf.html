@@ -26,7 +26,7 @@
                     <pre>
     // If a stock symbol has been submitted, concatenate the symbol to the URL and return the HTTP Response
     if (req.query.symbol) {
-        var url = req.query.url+req.query.symbol; 
+        var url = req.query.url+req.query.symbol;
         needle.get(url, function(error, newResponse) { ... }
                     </pre> An attacker can change the
                     <code>url</code> and <code>symbol</code> parameters to point to an attacker-controlled website to interact with the server.

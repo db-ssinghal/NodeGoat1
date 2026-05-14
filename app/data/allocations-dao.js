@@ -66,9 +66,9 @@ const AllocationsDAO = function(db){
                 // to inject arbitrary javascript code into the NoSQL query:
                 // 1. 0';while(true){}'
                 // 2. 1'; return 1 == '1
-                // Also implement fix in allocations.html for UX.                             
+                // Also implement fix in allocations.html for UX.
                 const parsedThreshold = parseInt(threshold, 10);
-                
+
                 if (parsedThreshold >= 0 && parsedThreshold <= 99) {
                     return {$where: `this.userId == ${parsedUserId} && this.stocks > ${parsedThreshold}`};
                 }
