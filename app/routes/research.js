@@ -12,7 +12,10 @@ function ResearchHandler(db) {
     this.displayResearch = (req, res) => {
 
         if (req.query.symbol) {
-            const url = req.query.url + req.query.symbol;
+            // Fix SSRF: do not allow the client to control the upstream URL.
+            // Pin the host to a trusted endpoint and only allow the symbol
+            // (safely encoded) as user-controlled input.
+            const url = "https://www.google.com/finance?q=" + encodeURIComponent(req.query.symbol);
             return needle.get(url, (error, newResponse, body) => {
                 if (!error && newResponse.statusCode === 200) {
                     res.writeHead(200, {
