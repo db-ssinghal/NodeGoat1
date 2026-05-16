@@ -1,3 +1,7 @@
+# Socket Security GitHub Actions Workflow
+# This workflow runs Socket Security scans on every commit to any branch
+# It automatically detects git repository information and handles different event types
+
 name: security-workflow
 run-name: Security Github Action
 
@@ -11,11 +15,11 @@ on:
 
 # Prevent concurrent runs for the same commit
 concurrency:
-  group: socket-scan-${{ github.ref }}-${{ github.sha }}
+  group: security-scan-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
-  socket-security:
+  security-scan:
     permissions:
       issues: write
       contents: read
@@ -35,7 +39,7 @@ jobs:
       - name: Install Socket CLI
         run: pip install socketsecurity --upgrade
       
-      - name: Run Socket Security Scan
+      - name: Run Security Scan
         env:
           SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
           GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
