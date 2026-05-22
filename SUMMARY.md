@@ -7,4 +7,5 @@
 - ef64809 fix(redirect): allowlist /learn redirect destination — HIGH — open redirect allowed phishing via trusted domain
 - c7f1957 fix(xss): enable swig autoescape and add | safe to intentional HTML — HIGH — autoescape: false exposed every template variable as a raw XSS vector
 - 70acb33 fix(session): set httpOnly: true on session cookie — HIGH — cookie was JS-readable, enabling session theft via any XSS
-- <will-fill-sha> fix(ssrf): allowlist url and symbol on research endpoint — HIGH — both params were fully attacker-controlled, enabling SSRF and internal service probing
+- b204bcf fix(ssrf): allowlist url and symbol on research endpoint — HIGH — both params were fully attacker-controlled, enabling SSRF and internal service probing
+- <will-fill-sha> fix(authz): add isAdmin gate to both /benefits routes — HIGH — any authenticated user could view and modify all users' benefit dates

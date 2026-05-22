@@ -98,7 +98,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ---
 
-### H-7 — Missing `isAdmin` gate on `/benefits`
+### H-7 — Missing `isAdmin` gate on `/benefits` ✅ Fixed
 - **File:** `app/routes/index.js:57–60`
 - **OWASP:** A7 — Missing Function Level Access Control
 - **Scanners:** NOT caught by any scanner (gap)
