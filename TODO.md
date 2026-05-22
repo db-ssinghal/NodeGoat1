@@ -141,7 +141,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ---
 
-### M-3 — Hardcoded cookie secret and crypto key
+### M-3 — Hardcoded cookie secret and crypto key ✅ Fixed
 - **File:** `config/env/all.js:7–10`
 - **OWASP:** A5 — Security Misconfiguration
 - **Scanners:** detect-secrets (`Secret Keyword` at line 8)
