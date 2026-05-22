@@ -121,7 +121,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ## MEDIUM
 
-### M-1 — Sensitive data (SSN, DOB, bank account) stored in plaintext
+### M-1 — Sensitive data (SSN, DOB, bank account) stored in plaintext ✅ Fixed
 - **File:** `app/data/profile-dao.js:42–91`
 - **OWASP:** A6 — Sensitive Data Exposure
 - **Scanners:** NOT caught by any scanner (gap)
