@@ -66,7 +66,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ---
 
-### H-4 — Swig `autoescape: false` — stored XSS on memos (and elsewhere)
+### H-4 — Swig `autoescape: false` — stored XSS on memos (and elsewhere) ✅ Fixed
 - **File:** `server.js:135–142` (root cause); `app/views/memos.html` (primary impact surface)
 - **OWASP:** A3 — XSS
 - **Scanners:** NOT caught by any scanner (gap)
