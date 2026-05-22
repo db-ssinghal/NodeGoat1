@@ -88,7 +88,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ---
 
-### H-6 — SSRF — research endpoint fetches arbitrary attacker-controlled URL
+### H-6 — SSRF — research endpoint fetches arbitrary attacker-controlled URL ✅ Fixed
 - **File:** `app/routes/research.js:15–16`
 - **OWASP:** A10 / SSRF
 - **Scanners:** NOT caught by any scanner (gap)

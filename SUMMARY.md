@@ -6,4 +6,5 @@
 - 01633e4 fix(auth): hash passwords with bcrypt on store and compare — HIGH — passwords stored and compared in plaintext; any DB read exposed all credentials immediately
 - ef64809 fix(redirect): allowlist /learn redirect destination — HIGH — open redirect allowed phishing via trusted domain
 - c7f1957 fix(xss): enable swig autoescape and add | safe to intentional HTML — HIGH — autoescape: false exposed every template variable as a raw XSS vector
-- <will-fill-sha> fix(session): set httpOnly: true on session cookie — HIGH — cookie was JS-readable, enabling session theft via any XSS
+- 70acb33 fix(session): set httpOnly: true on session cookie — HIGH — cookie was JS-readable, enabling session theft via any XSS
+- <will-fill-sha> fix(ssrf): allowlist url and symbol on research endpoint — HIGH — both params were fully attacker-controlled, enabling SSRF and internal service probing
