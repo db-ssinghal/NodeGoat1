@@ -34,7 +34,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ## HIGH
 
-### H-1 — No CSRF protection on any state-changing form
+### H-1 — No CSRF protection on any state-changing form ✅ Fixed
 - **File:** `server.js:107–113` (root cause); symptoms in all POST routes and 5 templates
 - **OWASP:** A8 — CSRF
 - **Scanners:** semgrep (`express-check-csurf-middleware-usage`); semgrep also fires django-no-csrf-token on `benefits.html`, `login.html`, `memos.html` — the django rule is a false positive for the rule match but the underlying CSRF issue is **real**.
