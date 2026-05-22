@@ -56,7 +56,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ---
 
-### H-3 — Open redirect — `GET /learn`
+### H-3 — Open redirect — `GET /learn` ✅ Fixed
 - **File:** `app/routes/index.js:72`
 - **OWASP:** A10 — Unvalidated Redirects and Forwards
 - **Scanners:** semgrep (`express-open-redirect`)
