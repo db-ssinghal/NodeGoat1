@@ -21,7 +21,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ---
 
-### C-2 — NoSQL injection via `$where` with unsanitized `threshold`
+### C-2 — NoSQL injection via `$where` with unsanitized `threshold` ✅ Fixed
 - **File:** `app/data/allocations-dao.js:78`
 - **OWASP:** A1 — Injection
 - **Scanners:** NOT caught by any scanner (gap)
