@@ -151,7 +151,7 @@ Scanner provenance: semgrep, detect-secrets, pnpm-audit, pip-audit, ruff, bandit
 
 ---
 
-### M-4 — Wrong ESAPI encoding context for `website` field
+### M-4 — Wrong ESAPI encoding context for `website` field ✅ Fixed
 - **File:** `app/routes/profile.js:28`
 - **OWASP:** A3 — XSS
 - **Scanners:** NOT caught by any scanner (gap)

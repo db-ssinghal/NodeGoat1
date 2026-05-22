@@ -12,4 +12,5 @@
 - 20c9cae fix(session): regenerate session ID on login to prevent fixation — HIGH — pre-login session ID persisted after auth, enabling session fixation attacks
 - 2543763 fix(crypto): encrypt SSN/DOB at rest in profile-dao — MEDIUM — SSN and DOB stored as plaintext; any DB read or secondary vuln exposed raw PII
 - e0608fd fix(redos): remove nested quantifier in bankRouting regex — MEDIUM — /([0-9]+)+\#/ caused exponential backtracking; authenticated user could stall the event loop
-- <will-fill-sha> fix(config): read cookie/crypto secrets from env vars — MEDIUM — hardcoded secrets in source allowed session cookie forgery and undermined encryption
+- a3caf50 fix(config): read cookie/crypto secrets from env vars — MEDIUM — hardcoded secrets in source allowed session cookie forgery and undermined encryption
+- <will-fill-sha> fix(xss): validate website scheme; build safe href in profile — MEDIUM — javascript: URI bypass and reflected XSS via raw firstName in href
