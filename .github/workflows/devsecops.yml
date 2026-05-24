@@ -3,8 +3,12 @@ name: DevSecOps CI Pipeline
 on:
   push:
     branches: [ "main", "master", "feature/security-pipeline" ]
-  pull_request:
-    branches: [ "main", "master" ]
+
+# --- AQUÍ AGREGA LOS PERMISOS PARA SAST ---
+permissions:
+  security-events: write # Permite a CodeQL escribir los hallazgos en tu pestaña de seguridad
+  actions: read          # Permite leer el estado de la ejecución
+  contents: read         # Permite leer tu código fuente
 
 jobs:
   security-scans:
@@ -22,11 +26,10 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       continue-on-error: true 
 
-    # --- AQUÍ INICIA EL NUEVO BLOQUE SAST (CodeQL) ---
     - name: Inicializar CodeQL (SAST)
       uses: github/codeql-action/init@v3
       with:
-        languages: 'javascript' # NodeGoat usa JavaScript
+        languages: 'javascript'
 
     - name: Auto-compilación de CodeQL
       uses: github/codeql-action/autobuild@v3
@@ -34,7 +37,6 @@ jobs:
     - name: Ejecutar Análisis de CodeQL
       uses: github/codeql-action/analyze@v3
       continue-on-error: true
-    # --- AQUÍ TERMINA EL BLOQUE SAST ---
 
     - name: Configurar Node.js
       uses: actions/setup-node@v4
@@ -44,7 +46,6 @@ jobs:
     - name: Instalar dependencias del proyecto
       run: npm install
 
-    # Tu paso de SCA que ya funciona perfectamente:
     - name: Escaneo de dependencias con Snyk (SCA)
       uses: snyk/actions/node@master
       env:
