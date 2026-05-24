@@ -4,16 +4,17 @@ on:
   push:
     branches: [ "main", "master", "feature/security-pipeline" ]
 
-# --- AQUÍ AGREGA LOS PERMISOS PARA SAST ---
 permissions:
-  security-events: write # Permite a CodeQL escribir los hallazgos en tu pestaña de seguridad
-  actions: read          # Permite leer el estado de la ejecución
-  contents: read         # Permite leer tu código fuente
+  security-events: write
+  actions: read
+  contents: read
 
 jobs:
-  security-scans:
+  # ----------------------------------------------------
+  # JOB 1: Análisis de la Aplicación (SAST + SCA)
+  # ----------------------------------------------------
+  application-scans:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout del código
       uses: actions/checkout@v4
@@ -52,4 +53,35 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         args: --severity-threshold=high
-      continue-on-error: true
+      continue-on-error: true 
+
+  # ----------------------------------------------------
+  # JOB 2: Análisis de Infraestructura (Contenedores)
+  # ----------------------------------------------------
+  infrastructure-scans:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout del código
+      uses: actions/checkout@v4
+
+    - name: Configurar Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Construir Imagen Docker Local para pruebas
+      run: |
+        docker build -t nodegoat:local .
+
+    - name: Escaneo de Seguridad del Contenedor con Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'nodegoat:local'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Subir resultados de Trivy a GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+        category: 'trivy'
