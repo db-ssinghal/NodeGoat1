@@ -1,0 +1,38 @@
+name: DevSecOps CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "master", "feature/security-pipeline" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  security-scans:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout del código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Escaneo de Secretos con Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true 
+
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Instalar dependencias del proyecto
+      run: npm install
+
+    - name: Escaneo de dependencias con Snyk
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
