@@ -5,7 +5,13 @@ on:
   pull_request:
     branches: [main, master, develop, stage, release]
   workflow_dispatch:
-   
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  security-events: write
+
 jobs:
   build:
     runs-on: [ubuntu-latest]
