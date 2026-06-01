@@ -19,6 +19,8 @@ jobs:
     #     java-version: 21
     #     distribution: temurin
     #     cache: maven
+    - name: Check Node Version
+      run: node --version
     - name: Polaris Scan
       uses: LanceMcCarthy/black-duck-security-scan@lance/update-runner-node-version
       with:
